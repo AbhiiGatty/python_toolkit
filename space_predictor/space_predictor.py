@@ -1,8 +1,8 @@
-import urllib.request
+import requests
 import threading
 
 #File_Addrs = 'user_data/links/data.project-gxs.com.final/crawled.txt'   # The address of file containing urls
-File_Addrs = 'test_links'      # For testing Purpose
+File_Addrs = 'links'      # For testing Purpose
 
 # Initialization
 List_Of_URLs = []
@@ -20,6 +20,7 @@ with open(File_Addrs,'r') as f: # Loading uls into list for faster access
     print("Total Number of URLs to process : {}".format(Total_URLs))
 
 Rate = 100/Total_URLs
+print(Rate)
 
 # Return the given bytes as a human friendly KB, MB, GB, or TB string'
 def HumanReadableSize(B):
@@ -42,23 +43,32 @@ def HumanReadableSize(B):
 
 # Main fuction to gather info about url
 def grab_info(url):
-    global Total_Size, Processed_URLs, Total_URLs, Progress,Rate  # Accessing global variables
-    if url != ' ':      # Ignoring any whitespaces within the list
+    global Total_Size, Processed_URLs, Total_URLs, Progress, Rate  # Accessing global variables
+    if url not in [' ','']:      # Ignoring any whitespaces within the list
         try:
-            site = urllib.request.urlopen(url)
-            Total_Size = Total_Size + site.length
-            print("URLs done processing {}/{} file size: {} Progress:{0:.2f}%".format(Processed_URLs, Total_URLs,HumanReadableSize(site.length), Progress))
+            # r.raise_for_status()
+            Cfile_Size = int(requests.get(url, stream=True).headers['Content-length'])
             Progress += Rate
+            print(Progress)
+            print('URLs done processing {0}/{1} file size: {2} Progress: {3:.2f}%'.format(Processed_URLs, Total_URLs,HumanReadableSize(Cfile_Size), Progress))
             Processed_URLs = Processed_URLs + 1
-            if Processed_URLs % 10 == 0:    # Display total size every 50 URLs
-               print("\n*********Total size: {}********** Current Progress:{0:.2f}%\n".format(HumanReadableSize(Total_Size), Progress))
+            Total_Size += Cfile_Size
+            print('Processed_URL {0} Size: {1}'.format(url, HumanReadableSize(Total_Size)))
+            if Processed_URLs % 50 == 0:    # Display total size every 50 URLs
+               print("\n*********Total size: {0}********** Current Progress:{1:.2f}\n".format(HumanReadableSize(Total_Size), Progress))
+            else:
+                pass
+        except requests.exceptions.ConnectionError as err:
+            List_Of_Invalid_URLs.append(url)
+            print(err)
+        except requests.exceptions.HTTPError as err:
+            print(err)
         except:
-           # print("Network Unavailable or Invalid URL")
-            List_Of_Invalid_URLs.append(url) # Catch the URLs that were dropped from the processing queue
+            print('invalid')
 
 # Creating a threading list using list and starting all threads
 def thread_series_creator(List_Of_URLs):
-    global List_Of_Invalid_URLs,Total_URLs
+    global List_Of_Invalid_URLs, Total_URLs
     List_Of_Invalid_URLs = [] # Reset the invalid url list
     start = 0
     weight = end = (Total_URLs%700)
@@ -87,6 +97,6 @@ while len(List_Of_Invalid_URLs) > 0:
 
 # Final result
 print("******Final Diagnostic Report******")
-print("Total no. of URLs: {} Processed URL rate: {}%".format(Total_URLs,int(Progress)))
+print("Total no. of URLs: {0} Processed URL rate: {1:.2f}%".format(Total_URLs, Progress))
 print("Total no. of Invalid URLs: {}".format(len(List_Of_Invalid_URLs)))
 print("Total size of {}/{} links is: {}".format(Processed_URLs,Total_URLs,HumanReadableSize(Total_Size))) 
