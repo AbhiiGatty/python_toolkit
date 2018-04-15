@@ -9,27 +9,24 @@ List_Of_URLs = []
 List_Of_Invalid_URLs = []
 Total_Size = 0
 Processed_URLs = 0
-Times_Looped = 0
-Max_retries = 3
+Retry_Num = 0
+Max_Retries = 3
 Progress = 0
 
 # Preprocessing
-with open(File_Addrs,'r') as f: # Loading uls into list for faster access
+with open(File_Addrs,'r') as f: # Loading URLs into list for faster access
     List_Of_URLs = list(set(f.read().splitlines()))    # Removing duplicates
     Total_URLs = len(List_Of_URLs)  # Total number of links
-    print("Total Number of URLs to process : {}".format(Total_URLs))
 
 Rate = 100/Total_URLs
-print(Rate)
 
-# Return the given bytes as a human friendly KB, MB, GB, or TB string'
+# Return the given bytes as a human friendly KB, MB, GB, or TB string
 def HumanReadableSize(B):
    B = float(B)
    KB = float(1024)
    MB = float(KB ** 2) # 1,048,576
    GB = float(KB ** 3) # 1,073,741,824
    TB = float(KB ** 4) # 1,099,511,627,776
-
    if B < KB:
       return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
    elif KB <= B < MB:
@@ -46,24 +43,17 @@ def grab_info(url):
     global Total_Size, Processed_URLs, Total_URLs, Progress, Rate  # Accessing global variables
     if url not in [' ','']:      # Ignoring any whitespaces within the list
         try:
-            # r.raise_for_status()
-            Cfile_Size = int(requests.get(url, stream=True).headers['Content-length'])
+            File_Size = int(requests.get(url, stream=True).headers['Content-length']) # Get only the headers not the entire content
             Progress += Rate
-            print(Progress)
-            print('URLs done processing {0}/{1} file size: {2} Progress: {3:.2f}%'.format(Processed_URLs, Total_URLs,HumanReadableSize(Cfile_Size), Progress))
             Processed_URLs = Processed_URLs + 1
-            Total_Size += Cfile_Size
-            print('Processed_URL {0} Size: {1}'.format(url, HumanReadableSize(Total_Size)))
-            if Processed_URLs % 50 == 0:    # Display total size every 50 URLs
-               print("\n*********Total size: {0}********** Current Progress:{1:.2f}\n".format(HumanReadableSize(Total_Size), Progress))
-            else:
-                pass
+            Total_Size += File_Size
+            print('URLs Done:{0}/{1} File Size:{2} Total Size:{3} Progress:{4:.2f}%'.format(Processed_URLs, Total_URLs, HumanReadableSize(File_Size), HumanReadableSize(Total_Size), Progress))
         except requests.exceptions.ConnectionError as err:
-            List_Of_Invalid_URLs.append(url)
             print(err)
         except requests.exceptions.HTTPError as err:
             print(err)
         except:
+            List_Of_Invalid_URLs.append(url)
             print('invalid')
 
 # Creating a threading list using list and starting all threads
@@ -85,17 +75,17 @@ def thread_series_creator(List_Of_URLs):
 
 # Running the list of URLs
 thread_series_creator(List_Of_URLs)
-# Retrying if 
+# Retrying if invalid links are found
 while len(List_Of_Invalid_URLs) > 0:
     print("\nTotal unprocessed/invalid URLs: {}\n".format(len(List_Of_Invalid_URLs)))
-    if Times_Looped < Max_retries:
-        print("*******Retrying unprocessed URLs {}/3*******\n".format(Times_Looped))
+    if Retry_Num < Max_Retries:
+        Retry_Num += 1
+        print("*******Retrying unprocessed URLs {}/3*******\n".format(Retry_Num))
         thread_series_creator(List_Of_Invalid_URLs)
-        Times_Looped += 1
     else:
         break
 
-# Final result
+# Final Report 
 print("******Final Diagnostic Report******")
 print("Total no. of URLs: {0} Processed URL rate: {1:.2f}%".format(Total_URLs, Progress))
 print("Total no. of Invalid URLs: {}".format(len(List_Of_Invalid_URLs)))
