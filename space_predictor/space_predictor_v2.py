@@ -1,8 +1,8 @@
 import requests
 import threading
 
-#File_Addrs = 'user_data/links/data.project-gxs.com.final/crawled.txt'   # The address of file containing urls
-File_Addrs = 'links'      # For testing Purpose
+File_Addrs = 'user_data/links/data.project-gxs.com.final/crawled.txt'   # The address of file containing urls
+#File_Addrs = 'links'      # For testing Purpose
 
 # Initialization
 List_Of_URLs = []
